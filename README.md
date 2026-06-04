@@ -2,7 +2,7 @@
 
 > 你的论文是"患者"，Agent 是"医生"。挂号、问诊、开处方、手术、出院——把赶 DDL 这件事从头到尾办完。
 
-**[👉 在线体验](https://pingfangww.github.io/ddl-doctor/)**
+## ✨ [在线体验 → https://pingfangww.github.io/ddl-doctor/](https://pingfangww.github.io/ddl-doctor/)
 
 ## 这是什么
 
