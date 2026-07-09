@@ -530,6 +530,23 @@
     box-shadow: 4px 4px 0 rgba(0,0,0,0.08);
   }
 
+  /* 未出院病历（中断恢复） */
+  .record-banner {
+    width: 100%; max-width: 440px; margin: 0 auto 4px;
+    padding: 14px 16px; cursor: pointer;
+    border: 1.5px dashed var(--red); border-radius: var(--radius-sketch-sm);
+    background: linear-gradient(180deg, rgba(225,112,85,0.08), rgba(225,112,85,0.02));
+    display: flex; align-items: center; gap: 10px;
+    text-align: left; transition: all 0.2s;
+  }
+  .record-banner:hover { transform: translateY(-2px); box-shadow: 3px 3px 0 rgba(225,112,85,0.15); }
+  .record-banner .rb-icon { font-size: 22px; }
+  .record-banner .rb-body { flex: 1; }
+  .record-banner .rb-title { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .record-banner .rb-sub { font-size: 12px; color: var(--red); margin-top: 2px; }
+  .record-banner .rb-go { font-size: 12px; color: var(--teal-dark); font-weight: 700; white-space: nowrap; }
+  .record-dismiss { font-size: 11px; color: var(--ink-light); text-decoration: underline; cursor: pointer; margin: 2px auto 12px; }
+
   .card-empty {
     text-align: center; padding: 36px 20px;
     color: var(--pencil); font-size: 13px;
@@ -1381,11 +1398,11 @@ function showTyping(s){
     // Fallback: CSS dots
     document.getElementById('lottieTyping').innerHTML='<div style="display:flex;gap:4px;padding:8px 0"><div style="width:6px;height:6px;background:var(--teal);border-radius:50%;animation:typeFade 1s infinite"></div><div style="width:6px;height:6px;background:var(--teal);border-radius:50%;animation:typeFade 1s infinite 0.2s"></div><div style="width:6px;height:6px;background:var(--teal);border-radius:50%;animation:typeFade 1s infinite 0.4s"></div></div>';
   }
-  setTimeout(()=>{t.remove();renderMsgs(s);updateCards(s);if(s.showDischarge)setTimeout(()=>showDischarge(),800);if(step<getSteps().length-1)setTimeout(showNextBtn,s.agentMessages.length*400+200);},1400);
+  setTimeout(()=>{t.remove();renderMsgs(s);updateCards(s);saveMedicalRecord();if(s.showDischarge)setTimeout(()=>showDischarge(),800);if(step<getSteps().length-1)setTimeout(showNextBtn,s.agentMessages.length*400+200);},1400);
 }
 
-function renderMsgs(s){
-  s.agentMessages.forEach((m,i)=>{setTimeout(()=>{
+function renderMsgs(s,instant){
+  s.agentMessages.forEach((m,i)=>{const run=()=>{
     const div=document.createElement('div');div.className='msg agent';let inner='';
     if(m.type==='text')inner=m.html;
     else if(m.type==='options')inner='<div class="option-list">'+m.options.map((o,j)=>`<div class="option-btn" onclick="pickOption(${j})"><b>${o.text}</b><div class="opt-desc">${o.desc}</div></div>`).join('')+'</div>';
@@ -1396,7 +1413,7 @@ function renderMsgs(s){
     else if(m.type==='aicheck')inner=`<div class="aicheck-block"><div class="ac-head">🧪 AI 率自查 · 第二化验项</div><div class="ac-score">AI 疑似度 <b style="color:${m.color}">${m.score}%</b> · 风险${m.level}</div><div class="ac-flag">⚠️ <b>${m.para}</b>：${m.issue}</div><div class="ac-sug">✍️ 改写建议：${m.suggestion}</div></div>`;
     div.innerHTML=`<div class="msg-header">🩺 急稿医生</div><div class="msg-bubble">${inner}</div>`;
     document.getElementById('chatMessages').appendChild(div);scrollChat();
-  },i*500);});
+  };if(instant)run();else setTimeout(run,i*500);});
 }
 
 function pickOption(idx){
@@ -1456,6 +1473,7 @@ function showDischarge(){
   document.getElementById('dComment').innerHTML=`<b>🩺 主治医生评语：</b><br>${v.comment}`;
   document.getElementById('dischargeOverlay').classList.add('show');
   launchConfetti();document.getElementById('totalDischarged').textContent='4';
+  clearMedicalRecord();
 }
 function closeDischarge(){document.getElementById('dischargeOverlay').classList.remove('show');}
 function showWall(){document.getElementById('wallOverlay').classList.add('show');}
@@ -1479,8 +1497,51 @@ function showAbout(){document.getElementById('aboutOverlay').classList.add('show
 function closeAbout(){document.getElementById('aboutOverlay').classList.remove('show');}
 function toggleUploadTip(el){el.classList.toggle('show-tip');document.addEventListener('click',function h(e){if(!el.contains(e.target)){el.classList.remove('show-tip');document.removeEventListener('click',h);}},{once:false});}
 
+function saveMedicalRecord(){
+  if(step<0)return;
+  try{
+    const cur=getSteps()[step]||{};
+    const rec={scenario:currentScenario,variant:selectedVariant,step:step,
+      label:SCENARIOS[currentScenario].input,
+      progressStep:(cur.stepsUpdate&&cur.stepsUpdate.done)?cur.stepsUpdate.done.length:0,
+      admit:admitTimeStr,ts:Date.now()};
+    localStorage.setItem('ddl_record',JSON.stringify(rec));
+  }catch(e){}
+}
+function clearMedicalRecord(){try{localStorage.removeItem('ddl_record');}catch(e){}}
+function loadMedicalRecord(){try{return JSON.parse(localStorage.getItem('ddl_record'));}catch(e){return null;}}
+function checkMedicalRecord(){
+  const rec=loadMedicalRecord();if(!rec)return;
+  const ws=document.getElementById('welcomeState');if(!ws)return;
+  const ex=ws.querySelector('.welcome-examples');if(!ex)return;
+  const banner=document.createElement('div');banner.className='record-banner';banner.onclick=resumeMedicalRecord;
+  banner.innerHTML=`<span class="rb-icon">🗂️</span><div class="rb-body"><div class="rb-title">你有一份未出院的病历</div><div class="rb-sub">${rec.label}（诊疗进度 ${rec.progressStep} / 6）</div></div><span class="rb-go">回到手术台 →</span>`;
+  ws.insertBefore(banner,ex);
+  const dismiss=document.createElement('div');dismiss.className='record-dismiss';dismiss.textContent='忽略这份病历，重新挂号';
+  dismiss.onclick=(e)=>{e.stopPropagation();clearMedicalRecord();banner.remove();dismiss.remove();};
+  ws.insertBefore(dismiss,ex);
+}
+function resumeMedicalRecord(){
+  const rec=loadMedicalRecord();if(!rec)return;
+  currentScenario=rec.scenario;selectedVariant=rec.variant;pickedOption=rec.variant;
+  admitTimeStr=rec.admit||new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('welcomeState')?.remove();
+  addMsg('user',SCENARIOS[currentScenario].input);
+  const steps=getSteps();
+  for(let i=0;i<=rec.step&&i<steps.length;i++){
+    step=i;const s=steps[i];
+    if(i>0){const msg=(s.userMessages)?s.userMessages[selectedVariant]:s.userMessage;if(msg)addMsg('user',msg);}
+    renderMsgs(s,true);updateCards(s);
+  }
+  if(step>0){document.querySelectorAll('.option-btn').forEach((b,j)=>{b.style.pointerEvents='none';if(j===selectedVariant){b.style.borderColor='var(--teal)';b.style.background='var(--green-bg)';}else b.style.opacity='0.3';});}
+  if(step<steps.length-1)showNextBtn();
+  scrollChat();
+}
+window.addEventListener('load',checkMedicalRecord);
+
 function resetDemo(){
   step=-1;currentScenario=0;currentWordTarget=3000;pickedOption=-1;selectedVariant=0;if(countdownTimer)clearInterval(countdownTimer);
+  clearMedicalRecord();
   const msgs=document.getElementById('chatMessages');
   msgs.innerHTML=`<div class="welcome-state" id="welcomeState"><div class="welcome-icon">🩺</div><div class="welcome-title">欢迎来到急稿问诊室</div><div class="welcome-hint">告诉我你要赶什么 DDL，我帮你从头到尾搞定。</div><div class="welcome-examples"><div class="welcome-example" onclick="startWithExample(0)">📝 古代晚期课程论文，3000 字，明天中午交</div><div class="welcome-example" onclick="startWithExample(1)">📖 现当代文学读书报告，2000 字，后天交</div><div class="welcome-example" onclick="startWithExample(2)">🔬 公共卫生导论期末论文，4000 字，下周一交</div><div class="welcome-example" onclick="startWithExample(3)">💻 人工智能伦理课程论文，3000 字，三天后交</div></div></div>`;
   document.getElementById('cardEmpty').style.display='';
