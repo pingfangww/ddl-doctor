@@ -62,7 +62,3 @@
 - [Lottie](https://airbnb.io/lottie/) — 打字动画
 - [Caveat](https://fonts.google.com/specimen/Caveat) — 手写字体
 - Blob API — 文件下载
-
-## 背景
-
-腾讯 TCAMP 2026 · 复旦产品创造营 · 课题三「学习搭子 Agent 设计」作品。
