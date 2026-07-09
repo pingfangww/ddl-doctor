@@ -707,6 +707,49 @@
   .followup-opt:hover { transform: translateY(-2px) rotate(0.5deg); border-color: var(--teal); background: var(--green-bg); }
   .followup-skip { margin-top: 16px; font-size: 12px; color: var(--pencil); cursor: pointer; text-decoration: underline; }
 
+  /* ===== Referral (转诊) ===== */
+  .referral-card {
+    background: var(--paper); border: 3px solid var(--ink); border-radius: 20px;
+    padding: 32px; width: 560px; max-height: 80vh; overflow-y: auto;
+    box-shadow: 6px 6px 0 rgba(0,0,0,0.1); animation: cardPop 0.4s ease-out; transform: rotate(0.3deg);
+  }
+  .referral-title { font-family: 'Caveat', cursive; font-size: 28px; font-weight: 700; }
+  .referral-sub { font-size: 13px; color: var(--pencil); margin-bottom: 20px; }
+  .dept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .dept-item {
+    border: 1.5px solid var(--ink); border-radius: var(--radius-sketch-sm);
+    padding: 16px; box-shadow: 2px 2px 0 rgba(0,0,0,0.04); position: relative;
+  }
+  .dept-item.open { border-color: var(--teal); background: var(--green-bg); }
+  .dept-item.soon { opacity: 0.72; }
+  .dept-emoji { font-size: 24px; margin-bottom: 6px; }
+  .dept-name { font-weight: 800; font-size: 14px; margin-bottom: 4px; }
+  .dept-desc { font-size: 12px; color: var(--ink-light); line-height: 1.6; }
+  .dept-badge { position: absolute; top: 12px; right: 12px; font-size: 10px; font-weight: 800; letter-spacing: 1px; padding: 2px 8px; border-radius: 8px; }
+  .dept-badge.open { color: var(--teal); background: var(--paper); border: 1px solid var(--teal); }
+  .dept-badge.soon { color: var(--pencil); background: var(--paper); border: 1px dashed var(--pencil); }
+
+  /* ===== Brief (导师简报) ===== */
+  .brief-card {
+    background: var(--paper); border: 3px solid var(--ink); border-radius: 20px;
+    padding: 32px; width: 520px; max-height: 80vh; overflow-y: auto;
+    box-shadow: 6px 6px 0 rgba(0,0,0,0.1); animation: cardPop 0.4s ease-out; transform: rotate(-0.3deg);
+  }
+  .brief-title { font-family: 'Caveat', cursive; font-size: 28px; font-weight: 700; }
+  .brief-sub { font-size: 13px; color: var(--pencil); margin-bottom: 16px; }
+  .brief-body {
+    white-space: pre-wrap; font-size: 13px; line-height: 1.9; color: var(--ink);
+    background: #FBF9F3; border: 1.5px dashed var(--pencil); border-radius: var(--radius-sketch-sm);
+    padding: 18px; max-height: 44vh; overflow-y: auto;
+  }
+  .brief-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .brief-btn {
+    flex: 1; padding: 12px; border: 1.5px solid var(--ink); border-radius: var(--radius-sketch-sm);
+    background: var(--paper); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .brief-btn.primary { background: var(--teal); color: var(--paper); border-color: var(--teal); }
+  .brief-btn:hover { transform: translateY(-1px); box-shadow: 3px 3px 0 rgba(0,0,0,0.1); }
+
   /* ===== Upload Button ===== */
   .upload-btn {
     width: 40px; height: 40px;
@@ -944,6 +987,8 @@
       </div>
     </div>
     <div class="header-right">
+      <button class="header-btn" onclick="showBrief()">📤 导师简报</button>
+      <button class="header-btn" onclick="showReferral()">🏥 转诊</button>
       <button class="header-btn" onclick="showWall()">🏆 出院墙</button>
       <button class="header-btn" onclick="resetDemo()">↻ 重来</button>
     </div>
@@ -1090,6 +1135,35 @@
       <div class="followup-opt" onclick="recordFollowup('先贴墙，还没出分 🙂')">先贴墙，还没出分 🙂</div>
     </div>
     <div class="followup-skip" onclick="closeFollowup()">跳过随访，直接看出院墙 →</div>
+  </div>
+</div>
+
+<div class="overlay" id="referralOverlay" onclick="if(event.target===this)closeReferral()">
+  <div class="referral-card">
+    <div class="referral-title">🏥 转诊 · 全院科室</div>
+    <div class="referral-sub">论文写作只是第一间诊室。同一套「问诊→处方→手术→出院」编排，可以复制到更多学业急症。</div>
+    <div class="dept-grid">
+      <div class="dept-item open"><span class="dept-badge open">接诊中</span><div class="dept-emoji">📝</div><div class="dept-name">论文写作科</div><div class="dept-desc">课程论文 / 读书报告 / 期末大作业，从选题到出院全流程。</div></div>
+      <div class="dept-item soon"><span class="dept-badge soon">敬请期待</span><div class="dept-emoji">📊</div><div class="dept-name">答辩PPT急诊</div><div class="dept-desc">开题 / 结题 / 组会汇报，一键从论文抽骨架成讲稿。</div></div>
+      <div class="dept-item soon"><span class="dept-badge soon">敬请期待</span><div class="dept-emoji">💼</div><div class="dept-name">简历门诊</div><div class="dept-desc">实习 / 秋招简历，STAR 化经历，对齐 JD 关键词。</div></div>
+      <div class="dept-item soon"><span class="dept-badge soon">敬请期待</span><div class="dept-emoji">💻</div><div class="dept-name">代码急诊室</div><div class="dept-desc">课程设计 / 大作业代码，报错分诊 + 分段修复。</div></div>
+      <div class="dept-item soon"><span class="dept-badge soon">敬请期待</span><div class="dept-emoji">📈</div><div class="dept-name">周报康复科</div><div class="dept-desc">实习周报 / 组会纪要，碎片记录自动成稿。</div></div>
+      <div class="dept-item soon"><span class="dept-badge soon">敬请期待</span><div class="dept-emoji">🌏</div><div class="dept-name">留学文书科</div><div class="dept-desc">PS / 推荐信 / 套磁信，跨文化表达润色。</div></div>
+    </div>
+    <button class="wall-close" onclick="closeReferral()">关闭</button>
+  </div>
+</div>
+
+<div class="overlay" id="briefOverlay" onclick="if(event.target===this)closeBrief()">
+  <div class="brief-card">
+    <div class="brief-title">📤 导师进度简报</div>
+    <div class="brief-sub">把当前诊疗进度整理成一段可直接发给导师/组员的进度汇报。</div>
+    <div class="brief-body" id="briefBody">—</div>
+    <div class="brief-actions">
+      <button class="brief-btn primary" onclick="copyBrief()" id="briefCopyBtn">📋 复制简报</button>
+      <button class="brief-btn" onclick="downloadBrief()">⬇️ 下载 .txt</button>
+    </div>
+    <button class="wall-close" onclick="closeBrief()">关闭</button>
   </div>
 </div>
 
@@ -1552,6 +1626,50 @@ function recordFollowup(score){
   saveWall(arr);updateDischargeCount();
   document.getElementById('followupOverlay').classList.remove('show');
   showWall();
+}
+
+/* ===== 转诊入口 ===== */
+function showReferral(){document.getElementById('referralOverlay').classList.add('show');}
+function closeReferral(){document.getElementById('referralOverlay').classList.remove('show');}
+
+/* ===== 导师进度简报 ===== */
+function buildBrief(){
+  if(step<0)return null;
+  const v=getVariant();
+  const prog=(document.getElementById('progressText').textContent||'').trim();
+  const words=(document.getElementById('wordCountNum').textContent||'0').trim();
+  const now=new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const done=document.getElementById('dischargeOverlay').classList.contains('show')||/^6\s*\/\s*6/.test(prog);
+  return ['【论文进度简报】',
+    '选题：'+v.title,
+    '分诊等级：'+v.triage.level,
+    '入院时间：'+admitTimeStr,
+    '诊疗进度：'+prog,
+    '当前字数：'+words+' / '+currentWordTarget,
+    '状态：'+(done?'已完成，可提交 ✅':'写作进行中'),
+    '',
+    '（由「急稿问诊室」自动生成 · '+now+'）'].join('\n');
+}
+function showBrief(){
+  const txt=buildBrief();
+  document.getElementById('briefBody').textContent=txt||'还没开始挂号——先在左侧选一个 DDL 场景，进入诊疗后就能一键生成给导师的进度简报。';
+  document.getElementById('briefCopyBtn').style.display=txt?'':'none';
+  document.getElementById('briefOverlay').classList.add('show');
+}
+function closeBrief(){document.getElementById('briefOverlay').classList.remove('show');}
+function copyBrief(){
+  const txt=buildBrief();if(!txt)return;
+  const btn=document.getElementById('briefCopyBtn');
+  const done=()=>{btn.textContent='✅ 已复制';setTimeout(()=>btn.textContent='📋 复制简报',1500);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));}
+  else fallbackCopy(txt,done);
+}
+function fallbackCopy(txt,cb){try{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);cb&&cb();}catch(e){}}
+function downloadBrief(){
+  const txt=buildBrief();if(!txt)return;
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='论文进度简报.txt';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 
 function downloadDoc(){
