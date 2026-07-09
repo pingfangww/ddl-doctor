@@ -677,6 +677,35 @@
     cursor: pointer; font-family: inherit; font-weight: 600;
   }
   .wall-close:hover { background: #E8E4DC; }
+  .wall-item-fresh { border-color: var(--teal); background: var(--green-bg); box-shadow: 3px 3px 0 rgba(0,163,129,0.18); }
+  .wall-item-fresh::after { content: 'NEW'; float: right; font-size: 10px; font-weight: 800; color: var(--teal); letter-spacing: 1px; }
+  .wall-item-score { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700; color: var(--teal); background: var(--green-bg); border: 1px solid var(--teal); border-radius: 8px; padding: 1px 8px; }
+
+  /* ===== Followup ===== */
+  .followup-card {
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    border-radius: 20px;
+    padding: 32px; width: 420px;
+    box-shadow: 6px 6px 0 rgba(0,0,0,0.1);
+    animation: cardPop 0.4s ease-out;
+    transform: rotate(-0.4deg);
+    text-align: center;
+  }
+  .followup-emoji { font-size: 40px; margin-bottom: 8px; }
+  .followup-title { font-family: 'Caveat', cursive; font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+  .followup-sub { font-size: 13px; color: var(--pencil); margin-bottom: 22px; }
+  .followup-opts { display: flex; flex-direction: column; gap: 10px; }
+  .followup-opt {
+    border: 1.5px solid var(--ink);
+    border-radius: var(--radius-sketch-sm);
+    padding: 13px 16px; font-size: 14px; font-weight: 600;
+    cursor: pointer; background: var(--paper);
+    transition: all 0.15s; text-align: left;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.05);
+  }
+  .followup-opt:hover { transform: translateY(-2px) rotate(0.5deg); border-color: var(--teal); background: var(--green-bg); }
+  .followup-skip { margin-top: 16px; font-size: 12px; color: var(--pencil); cursor: pointer; text-decoration: underline; }
 
   /* ===== Upload Button ===== */
   .upload-btn {
@@ -1031,7 +1060,7 @@
     <div class="discharge-field"><span class="discharge-label">字数</span><span class="discharge-value" id="dWords">3096</span></div>
     <div class="discharge-field"><span class="discharge-label">引用</span><span class="discharge-value" id="dCites">12 条</span></div>
     <div class="discharge-comment" id="dComment"><b>🩺 主治医生评语：</b><br>—</div>
-    <button class="discharge-close" onclick="closeDischarge()">贴到出院墙 🏆</button>
+    <button class="discharge-close" onclick="startFollowup()">贴到出院墙 🏆</button>
   </div>
 </div>
 
@@ -1046,6 +1075,21 @@
       <div class="wall-item wall-item-empty"><div style="text-align:center"><div style="font-size:24px;margin-bottom:4px">+</div><div style="font-size:12px">下一位患者</div></div></div>
     </div>
     <button class="wall-close" onclick="closeWall()">关闭</button>
+  </div>
+</div>
+
+<div class="overlay" id="followupOverlay" onclick="if(event.target===this)closeFollowup()">
+  <div class="followup-card">
+    <div class="followup-emoji">📮</div>
+    <div class="followup-title">出院随访</div>
+    <div class="followup-sub">论文交上去之后，结果怎么样？<br>（随访会贴到出院墙，帮下一位患者建立信心）</div>
+    <div class="followup-opts">
+      <div class="followup-opt" onclick="recordFollowup('拿了 90+ 🎉')">交了 · 拿了 90+ 🎉</div>
+      <div class="followup-opt" onclick="recordFollowup('及格万岁 😌')">交了 · 及格万岁 😌</div>
+      <div class="followup-opt" onclick="recordFollowup('压线交上 😮‍💨')">压线交上 · 惊险过关 😮‍💨</div>
+      <div class="followup-opt" onclick="recordFollowup('先贴墙，还没出分 🙂')">先贴墙，还没出分 🙂</div>
+    </div>
+    <div class="followup-skip" onclick="closeFollowup()">跳过随访，直接看出院墙 →</div>
   </div>
 </div>
 
@@ -1472,12 +1516,50 @@ function showDischarge(){
   document.getElementById('dCites').textContent=v.cites+' 条';
   document.getElementById('dComment').innerHTML=`<b>🩺 主治医生评语：</b><br>${v.comment}`;
   document.getElementById('dischargeOverlay').classList.add('show');
-  launchConfetti();document.getElementById('totalDischarged').textContent='4';
+  launchConfetti();updateDischargeCount();
   clearMedicalRecord();
 }
 function closeDischarge(){document.getElementById('dischargeOverlay').classList.remove('show');}
-function showWall(){document.getElementById('wallOverlay').classList.add('show');}
+function showWall(){renderWall();updateDischargeCount();document.getElementById('wallOverlay').classList.add('show');}
 function closeWall(){document.getElementById('wallOverlay').classList.remove('show');}
+
+/* ===== 出院墙动态化 + 随访 ===== */
+const WALL_BASE=[
+  {title:'📝 《晚明文人的自我书写》',meta:'🟡 急诊 · 4200字 · 3.8h<br>2026-05-18 · 文学<br>"第一次用，大纲就被惊到了"'},
+  {title:'🔬 《流行病学调查设计》',meta:'🟢 门诊 · 3500字 · 2.8h<br>2026-05-22 · 公共卫生<br>"门诊果然从容"'},
+  {title:'💻 《神经网络反向传播推导》',meta:'🔴 抢救 · 5000字 · 5.1h<br>2026-05-28 · 计算机<br>"5000字抢救成功，奇迹"'}
+];
+const DEPT_MAP={0:{dept:'历史',emoji:'📚'},1:{dept:'文学',emoji:'📖'},2:{dept:'公共卫生',emoji:'🔬'},3:{dept:'AI伦理',emoji:'💻'}};
+function loadWall(){try{return JSON.parse(localStorage.getItem('ddl_wall'))||[];}catch(e){return [];}}
+function saveWall(arr){try{localStorage.setItem('ddl_wall',JSON.stringify(arr));}catch(e){}}
+function updateDischargeCount(){const el=document.getElementById('totalDischarged');if(el)el.textContent=String(WALL_BASE.length+loadWall().length);}
+function renderWall(){
+  const grid=document.querySelector('#wallOverlay .wall-grid');if(!grid)return;
+  const mine=loadWall();
+  const cards=[];
+  mine.forEach(it=>{
+    const scoreTag=it.score?`<div class="wall-item-score">${it.score}</div>`:'';
+    cards.push(`<div class="wall-item${it._new?' wall-item-fresh':''}"><div class="wall-item-title">${it.emoji} ${it.title}</div><div class="wall-item-meta">${it.meta}</div>${scoreTag}</div>`);
+  });
+  WALL_BASE.forEach(it=>{cards.push(`<div class="wall-item"><div class="wall-item-title">${it.title}</div><div class="wall-item-meta">${it.meta}</div></div>`);});
+  cards.push(`<div class="wall-item wall-item-empty"><div style="text-align:center"><div style="font-size:24px;margin-bottom:4px">+</div><div style="font-size:12px">下一位患者</div></div></div>`);
+  grid.innerHTML=cards.join('');
+}
+function startFollowup(){
+  document.getElementById('dischargeOverlay').classList.remove('show');
+  document.getElementById('followupOverlay').classList.add('show');
+}
+function closeFollowup(){document.getElementById('followupOverlay').classList.remove('show');showWall();}
+function recordFollowup(score){
+  const v=getVariant();const d=DEPT_MAP[currentScenario]||{dept:'',emoji:'📄'};
+  const meta=`${v.triage.level} · ${v.finalWords}字 · ${v.triage.duration}<br>${new Date().toISOString().slice(0,10)} · ${d.dept}<br>随访：${score}`;
+  const arr=loadWall();
+  arr.forEach(it=>{delete it._new;});
+  arr.unshift({emoji:d.emoji,title:v.title.replace(/[《》]/g,''),meta,score,_new:true});
+  saveWall(arr);updateDischargeCount();
+  document.getElementById('followupOverlay').classList.remove('show');
+  showWall();
+}
 
 function downloadDoc(){
   const v=getVariant();const content=v.docContent||'（Demo 示意文件）';
@@ -1538,6 +1620,7 @@ function resumeMedicalRecord(){
   scrollChat();
 }
 window.addEventListener('load',checkMedicalRecord);
+window.addEventListener('load',updateDischargeCount);
 
 function resetDemo(){
   step=-1;currentScenario=0;currentWordTarget=3000;pickedOption=-1;selectedVariant=0;if(countdownTimer)clearInterval(countdownTimer);
@@ -1548,7 +1631,7 @@ function resetDemo(){
   ['patientCard','progressCard','wordCard'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('chatInput').disabled=false;document.getElementById('sendBtn').disabled=false;
   document.getElementById('chatInput').value='';document.getElementById('nextBtnWrap')?.remove();
-  document.getElementById('totalDischarged').textContent='3';
+  updateDischargeCount();
   for(let i=0;i<6;i++){const el=document.getElementById('step'+i);el.className='step-item pending';el.querySelector('.step-icon').textContent='○';}
   document.getElementById('progressFill').style.width='0%';document.getElementById('progressText').textContent='0 / 6';
   document.getElementById('wordCountNum').textContent='0';document.getElementById('wordFill').style.width='0%';
